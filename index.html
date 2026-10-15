@@ -72,7 +72,7 @@
             color: #ffffff;
         }
 
-        /* Glassmorphism Classes (Hardware accelerated) */
+        /* Glassmorphism Classes */
         .glass-panel {
             background: rgba(20, 12, 36, 0.72);
             backdrop-filter: blur(16px);
@@ -98,7 +98,7 @@
             box-shadow: 0 12px 28px rgba(244, 114, 182, 0.2);
         }
 
-        /* Mobile Performance Optimization (drastically reduces lag & eliminates composite drops) */
+        /* Mobile Performance Optimization */
         @media (max-width: 768px) {
             .glass-panel {
                 backdrop-filter: blur(6px);
@@ -254,7 +254,7 @@
         }
 
         /* =========================================================
-           HIGH CONTRAST BLACK TEXT FOR LIGHT MODE (Fixes Low Visibility)
+           HIGH CONTRAST BLACK TEXT FOR LIGHT MODE
            ========================================================= */
         body.light-mode {
             background-color: #fdf5f8 !important;
@@ -278,7 +278,6 @@
             border-color: rgba(244, 114, 182, 0.65);
         }
 
-        /* Enforce pure black for all body text, subtitles & muted copy in light mode */
         body.light-mode #hero-subtitle,
         body.light-mode #intro-desc,
         body.light-mode p,
@@ -332,6 +331,9 @@
 </head>
 <body class="relative bg-night text-slate-100 h-screen w-screen overflow-hidden antialiased select-none">
 
+    <!-- Custom Background Audio (Kept in same folder as music.mp3) -->
+    <audio id="bg-music" src="music.mp3" loop preload="auto"></audio>
+
     <!-- Persistent Ambient Background Canvas -->
     <canvas id="ambient-canvas" class="fixed inset-0 pointer-events-none z-0 w-full h-full"></canvas>
 
@@ -372,10 +374,10 @@
                 <span class="text-xs transition-transform duration-300 group-hover:scale-110" id="theme-moon-icon">🌙</span>
             </button>
 
-            <!-- Sound Toggle Button -->
-            <button id="audio-toggle-btn" class="glass-card text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 text-pink-300 hover:text-white transition-all shadow-md active:scale-95">
-                <span id="sound-icon" class="inline-block animate-pulse">🎵</span>
-                <span id="sound-label" class="hidden sm:inline">Music: Off</span>
+            <!-- Sound Toggle Button (Music: On by default) -->
+            <button id="audio-toggle-btn" onclick="sound.toggleMusic()" class="glass-card text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 text-pink-300 hover:text-white transition-all shadow-md active:scale-95">
+                <span id="sound-icon" class="inline-block animate-pulse">✨</span>
+                <span id="sound-label" class="hidden sm:inline">Music: On</span>
             </button>
         </div>
     </header>
@@ -480,7 +482,6 @@
                     </p>
                 </div>
 
-                <!-- Responsive Grid: 3 cols on mobile, 6 cols in ONE line on laptop (lg:grid-cols-6) with vertical rectangle ratio -->
                 <div id="photo-grid" class="grid grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 w-full max-h-[64vh] overflow-y-auto p-1 pr-1.5">
                     <!-- Populated dynamically via renderGallery() -->
                 </div>
@@ -829,7 +830,6 @@
             navBrand: "Dhanushree's Birthday",
             subtitle: "Today, the world celebrates someone truly special. A soul who brings laughter, warmth, quiet wisdom, and unmistakable magic wherever she steps.",
             
-            // Section 3: Exact original file paths preserved
             photos: [
                 {
                     url: "IMG-20261004-WA0030.jpg.jpeg",
@@ -869,7 +869,6 @@
                 }
             ],
 
-            // Relationship Milestones
             timeline: [
                 {
                     date: "Chapter 1",
@@ -903,7 +902,6 @@
                 }
             ],
 
-            // Chapter 6: Surprise Gift Box Data
             gifts: [
                 {
                     icon: "🌟",
@@ -925,7 +923,6 @@
                 }
             ],
 
-            // Heartfelt Letter
             letterText: `Dearest Dhanu 🎀,
 
 Happiest birthday to the loveliest women that I've ever known 😋. 
@@ -950,7 +947,6 @@ Happiest Birthday, Mummyy🫂♥️!
 
 Always with love!`,
 
-            // Wishes
             wishes: [
                 {
                     icon: "☀️",
@@ -1003,100 +999,159 @@ Always with love!`,
                 track.style.backgroundColor = 'rgba(244, 114, 182, 0.4)';
                 sunIcon.style.opacity = '1';
                 moonIcon.style.opacity = '0.5';
-                sound.playChime(659.25, 0.6, 0.12);
+                sound.playChime(659.25, 0.5, 0.1);
             } else {
                 thumb.style.transform = 'translateX(0px)';
                 track.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
                 sunIcon.style.opacity = '0.5';
                 moonIcon.style.opacity = '1';
-                sound.playChime(440.00, 0.6, 0.12);
+                sound.playChime(440.00, 0.5, 0.1);
             }
         }
 
-        /* Sound Engine */
+        /* =========================================================
+           SOUND & CUSTOM AUDIO ENGINE (ON BY DEFAULT)
+           ========================================================= */
         class SoundEngine {
             constructor() {
-                this.ctx = null;
-                this.isPlayingMusic = false;
-                this.interval = null;
-                this.notes = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99];
+                this.audioCtx = null;
+                this.bgAudio = null;
+                this.isPlayingMusic = true;
             }
-            init() {
-                if (!this.ctx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    this.ctx = new AudioContext();
+
+            initAudio() {
+                if (!this.bgAudio) {
+                    this.bgAudio = document.getElementById('bg-music');
+                    if (this.bgAudio) {
+                        this.bgAudio.volume = 0.65;
+                    }
                 }
-                if (this.ctx.state === 'suspended') this.ctx.resume();
             }
-            playChime(freq = 523.25, duration = 1.2, volume = 0.15) {
+
+            startMusicDefault() {
+                this.initAudio();
+                if (!this.bgAudio) return;
+
+                const promise = this.bgAudio.play();
+                if (promise !== undefined) {
+                    promise.then(() => {
+                        this.isPlayingMusic = true;
+                        this.updateUI(true);
+                    }).catch(() => {
+                        // Browser strictly held autoplay: listen to the first tap anywhere to start
+                        this.isPlayingMusic = true;
+                        this.updateUI(true);
+
+                        const startOnUserTouch = () => {
+                            if (this.bgAudio && this.bgAudio.paused && this.isPlayingMusic) {
+                                this.bgAudio.play().catch(() => {});
+                            }
+                            window.removeEventListener('pointerdown', startOnUserTouch);
+                            window.removeEventListener('click', startOnUserTouch);
+                            window.removeEventListener('touchstart', startOnUserTouch);
+                        };
+
+                        window.addEventListener('pointerdown', startOnUserTouch, { once: true });
+                        window.addEventListener('click', startOnUserTouch, { once: true });
+                        window.addEventListener('touchstart', startOnUserTouch, { once: true });
+                    });
+                }
+            }
+
+            toggleMusic() {
+                this.initAudio();
+                if (!this.bgAudio) return;
+
+                if (this.bgAudio.paused) {
+                    this.bgAudio.play().then(() => {
+                        this.isPlayingMusic = true;
+                        this.updateUI(true);
+                    }).catch(e => console.log("Audio play error:", e));
+                } else {
+                    this.bgAudio.pause();
+                    this.isPlayingMusic = false;
+                    this.updateUI(false);
+                }
+            }
+
+            updateUI(playing) {
+                const label = document.getElementById('sound-label');
+                const icon = document.getElementById('sound-icon');
+                if (label) label.textContent = playing ? "Music: On" : "Music: Off";
+                if (icon) {
+                    icon.textContent = playing ? "✨" : "🎵";
+                    if (playing) {
+                        icon.classList.add('animate-pulse');
+                    } else {
+                        icon.classList.remove('animate-pulse');
+                    }
+                }
+            }
+
+            // Chime sound effects via Web Audio API
+            playChime(freq = 523.25, duration = 0.8, volume = 0.12) {
                 try {
-                    this.init();
-                    const now = this.ctx.currentTime;
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!this.audioCtx) this.audioCtx = new AudioContext();
+                    if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+
+                    const osc = this.audioCtx.createOscillator();
+                    const gain = this.audioCtx.createGain();
+                    const now = this.audioCtx.currentTime;
+
                     osc.type = 'sine';
                     osc.frequency.setValueAtTime(freq, now);
+
                     gain.gain.setValueAtTime(volume, now);
                     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
                     osc.connect(gain);
-                    gain.connect(this.ctx.destination);
+                    gain.connect(this.audioCtx.destination);
+
                     osc.start(now);
                     osc.stop(now + duration);
                 } catch(e) {}
             }
+
             playCandleBlow() {
                 try {
-                    this.init();
-                    const now = this.ctx.currentTime;
-                    const bufferSize = this.ctx.sampleRate * 0.35;
-                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!this.audioCtx) this.audioCtx = new AudioContext();
+                    if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+
+                    const now = this.audioCtx.currentTime;
+                    const bufferSize = this.audioCtx.sampleRate * 0.3;
+                    const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
                     const output = buffer.getChannelData(0);
                     for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
-                    const noise = this.ctx.createBufferSource();
+
+                    const noise = this.audioCtx.createBufferSource();
                     noise.buffer = buffer;
-                    const filter = this.ctx.createBiquadFilter();
+
+                    const filter = this.audioCtx.createBiquadFilter();
                     filter.type = 'lowpass';
-                    filter.frequency.setValueAtTime(700, now);
-                    filter.frequency.exponentialRampToValueAtTime(100, now + 0.35);
-                    const gain = this.ctx.createGain();
-                    gain.gain.setValueAtTime(0.18, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    filter.frequency.setValueAtTime(650, now);
+                    filter.frequency.exponentialRampToValueAtTime(80, now + 0.3);
+
+                    const gain = this.audioCtx.createGain();
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
                     noise.connect(filter);
                     filter.connect(gain);
-                    gain.connect(this.ctx.destination);
+                    gain.connect(this.audioCtx.destination);
                     noise.start(now);
                 } catch(e) {}
             }
+
             playFanfare() {
-                this.init();
                 [392.00, 523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
-                    setTimeout(() => this.playChime(freq, 2.0, 0.2), idx * 150);
+                    setTimeout(() => this.playChime(freq, 1.4, 0.16), idx * 130);
                 });
-            }
-            toggleMusic() {
-                this.init();
-                this.isPlayingMusic = !this.isPlayingMusic;
-                const label = document.getElementById('sound-label');
-                const icon = document.getElementById('sound-icon');
-                if (this.isPlayingMusic) {
-                    label.textContent = "Music: On";
-                    icon.textContent = "✨";
-                    this.interval = setInterval(() => {
-                        const note = this.notes[Math.floor(Math.random() * this.notes.length)];
-                        this.playChime(note, 2.2, 0.1);
-                    }, 1300);
-                    this.playFanfare();
-                } else {
-                    label.textContent = "Music: Off";
-                    icon.textContent = "🎵";
-                    if (this.interval) clearInterval(this.interval);
-                    this.interval = null;
-                }
             }
         }
 
         const sound = new SoundEngine();
-        document.getElementById('audio-toggle-btn').addEventListener('click', () => sound.toggleMusic());
 
         /* Scene Navigation */
         let currentScene = 0;
@@ -1116,10 +1171,16 @@ Always with love!`,
         function goToScene(targetIndex) {
             if (targetIndex < 0 || targetIndex >= totalScenes || targetIndex === currentScene) return;
 
+            // Ensure custom audio continues smoothly
+            const bgAudio = document.getElementById('bg-music');
+            if (bgAudio && bgAudio.paused && sound.isPlayingMusic) {
+                bgAudio.play().catch(() => {});
+            }
+
             const fromEl = document.getElementById(`scene-${currentScene}`);
             const toEl = document.getElementById(`scene-${targetIndex}`);
 
-            sound.playChime(523.25 + (targetIndex * 40), 0.8, 0.08);
+            sound.playChime(523.25 + (targetIndex * 40), 0.7, 0.08);
 
             const isForward = targetIndex > currentScene;
             gsap.timeline()
@@ -1150,6 +1211,12 @@ Always with love!`,
         }
 
         function nextScene() {
+            // First click trigger ensures music starts seamlessly if browser blocked initial autoplay
+            const bgAudio = document.getElementById('bg-music');
+            if (bgAudio && bgAudio.paused && sound.isPlayingMusic) {
+                bgAudio.play().catch(() => {});
+            }
+
             if (currentScene < totalScenes - 1) goToScene(currentScene + 1);
         }
 
@@ -1287,7 +1354,7 @@ Always with love!`,
             const modal = document.getElementById('lightbox-modal');
             modal.classList.remove('opacity-0', 'pointer-events-none');
             modal.classList.add('opacity-100', 'pointer-events-auto');
-            sound.playChime(659.25, 0.6, 0.1);
+            sound.playChime(659.25, 0.5, 0.1);
         }
 
         function updateLightbox() {
@@ -1375,7 +1442,7 @@ Always with love!`,
         function openGiftBox(idx) {
             const data = CONFIG.gifts[idx];
             document.getElementById(`gift-box-${idx}`).classList.add('opened');
-            sound.playChime(659.25 + (idx * 60), 1.0, 0.15);
+            sound.playChime(659.25 + (idx * 60), 0.8, 0.15);
 
             confetti({
                 particleCount: 40,
@@ -1410,7 +1477,7 @@ Always with love!`,
         let letterIdx = 0;
 
         function openLetter() {
-            sound.playChime(523.25, 1.2, 0.15);
+            sound.playChime(523.25, 0.9, 0.15);
             const modal = document.getElementById('letter-modal');
             modal.classList.remove('opacity-0', 'pointer-events-none');
             modal.classList.add('opacity-100', 'pointer-events-auto');
@@ -1443,7 +1510,7 @@ Always with love!`,
             modal.classList.remove('opacity-100', 'pointer-events-auto');
         }
 
-        /* Fireworks Engine (Throttled & Lightweight) */
+        /* Fireworks Engine */
         class FireworksEngine {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
@@ -1466,7 +1533,7 @@ Always with love!`,
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
                     this.launchFirework(x, y);
-                    sound.playChime(783.99 + (Math.random() * 200 - 100), 0.8, 0.1);
+                    sound.playChime(783.99 + (Math.random() * 200 - 100), 0.7, 0.1);
                 });
 
                 this.animate();
@@ -1543,6 +1610,8 @@ Always with love!`,
                     this.ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
                     this.ctx.fillStyle = p.color;
                     this.ctx.globalAlpha = p.alpha;
+                    this.ctx.shadowBlur = 6;
+                    this.ctx.shadowColor = p.color;
                     this.ctx.fill();
                     this.ctx.restore();
                 }
@@ -1571,9 +1640,7 @@ Always with love!`,
             });
         }
 
-        /* =========================================================
-           HIGH-PERFORMANCE AMBIENT CANVAS (Lag-free on Mobile)
-           ========================================================= */
+        /* High-Performance Canvas */
         class AmbientCanvas {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
@@ -1593,7 +1660,6 @@ Always with love!`,
                     this.isMobile = window.innerWidth < 768;
                 });
 
-                // Highly optimized particle counts for silky-smooth mobile framerate
                 const count = this.isMobile ? 12 : 30;
                 for (let i = 0; i < count; i++) {
                     this.particles.push({
@@ -1631,7 +1697,6 @@ Always with love!`,
             animate() {
                 this.ctx.clearRect(0, 0, this.width, this.height);
 
-                // Draw dust particles (no heavy shadowBlur = buttery 60 FPS)
                 for (let p of this.particles) {
                     p.x += p.speedX; p.y += p.speedY;
                     if (p.x < 0) p.x = this.width; if (p.x > this.width) p.x = 0;
@@ -1644,7 +1709,6 @@ Always with love!`,
                     this.ctx.fill();
                 }
 
-                // Draw falling petals
                 for (let pt of this.petals) {
                     pt.y += pt.speedY;
                     pt.x += pt.speedX;
@@ -1674,6 +1738,8 @@ Always with love!`,
             updateNavState();
             new AmbientCanvas('ambient-canvas');
             fireworksInstance = new FireworksEngine('fireworks-canvas');
+            // Auto start your music by default
+            sound.startMusicDefault();
         });
     </script>
 </body>
